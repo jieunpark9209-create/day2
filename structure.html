@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>우리 앱은 이렇게 움직여요</title>
+<style>
+  :root{--bg:#f6f8fb;--ink:#1d2733;--mut:#5f6f82;--card:#fff;--line:#d9e1ea;
+    --fe:#2f80ed;--api:#27ae60;--db:#9b51e0;--hot:#f2994a}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif;background:var(--bg);color:var(--ink);line-height:1.65}
+  .wrap{max-width:980px;margin:0 auto;padding:28px 16px 60px}
+  h1{font-size:1.8rem;margin-bottom:6px}
+  .lead{color:var(--mut);margin-bottom:22px}
+  h2{font-size:1.25rem;margin:34px 0 10px}
+  .box{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px}
+  .analogy{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+  .analogy div{border-radius:12px;padding:14px;border:2px solid}
+  .analogy b{display:block;font-size:1.05rem}
+  .a1{border-color:var(--fe);background:#eaf2fe}.a2{border-color:var(--api);background:#e6f6ec}.a3{border-color:var(--db);background:#f3eafb}
+
+  /* 애니메이션 무대 */
+  .tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+  .tabs button,.ctl button{border:1px solid var(--line);background:#fff;padding:8px 16px;border-radius:20px;cursor:pointer;font:inherit}
+  .tabs button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .ctl{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+  .ctl button.main{background:var(--hot);color:#fff;border-color:var(--hot);font-weight:700}
+  .stage{position:relative;height:210px;margin:6px 0}
+  .node{position:absolute;top:30px;width:27%;height:150px;border-radius:16px;border:3px solid;background:#fff;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:8px;transition:box-shadow .3s,transform .3s}
+  .node .ic{font-size:2.4rem}.node b{font-size:1rem}.node small{color:var(--mut);font-size:.78rem}
+  .node.act{box-shadow:0 0 0 6px rgba(242,153,74,.35);transform:scale(1.04)}
+  #n0{left:0;border-color:var(--fe)}#n1{left:36.5%;border-color:var(--api)}#n2{right:0;border-color:var(--db)}
+  .pipe{position:absolute;top:104px;height:4px;background:var(--line);border-radius:2px}
+  #p01{left:27%;width:9.5%}#p12{left:63.5%;width:9.5%}
+  #pk{position:absolute;top:84px;left:12%;min-width:46px;padding:6px 10px;border-radius:14px;background:var(--hot);color:#fff;
+    font-size:.8rem;font-weight:700;text-align:center;white-space:nowrap;transition:left .9s ease-in-out,opacity .3s,background .3s;
+    box-shadow:0 4px 12px rgba(0,0,0,.2);z-index:2}
+  #pk.hide{opacity:0}
+  .say{min-height:92px;background:#fff8ee;border:1px solid #f6d9b4;border-radius:12px;padding:14px 16px}
+  .say .st{font-size:.8rem;color:var(--hot);font-weight:700}
+  pre{margin-top:10px;background:#1e2430;color:#e6edf6;border-radius:10px;padding:12px 14px;font-size:.82rem;overflow-x:auto;line-height:1.55}
+  .dots{display:flex;gap:6px;margin-top:12px}
+  .dots i{width:28px;height:6px;border-radius:3px;background:var(--line)}.dots i.on{background:var(--hot)}
+
+  /* 파일 지도 */
+  table{width:100%;border-collapse:collapse;font-size:.92rem}
+  td,th{padding:10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+  th{background:#eef2f7}
+  code{background:#eef2f7;padding:1px 6px;border-radius:5px;font-size:.88em}
+
+  /* 로컬 vs 배포 */
+  .two{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+  .env h3{margin-bottom:8px}
+  .env ul{padding-left:18px}
+  .env li{margin:5px 0}
+  .tag{display:inline-block;font-size:.75rem;padding:1px 8px;border-radius:10px;color:#fff;margin-right:4px}
+  .note{background:#eaf2fe;border-left:5px solid var(--fe);padding:12px 14px;border-radius:8px;margin-top:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🧭 우리 앱은 이렇게 움직여요</h1>
+  <p class="lead">Railway · FastAPI · Vercel · Supabase … 이름이 어려워 보여도, 사실은 <b>식당</b>과 똑같은 구조입니다.</p>
+
+  <div class="box">
+    <div class="analogy">
+      <div class="a1"><b>🙋 손님 = 프론트엔드</b>화면(버튼, 입력창). 눈에 보이는 부분. <code>frontend/index.html</code><br><small>배포 위치: Vercel</small></div>
+      <div class="a2"><b>👨‍🍳 주방장 = FastAPI 서버</b>손님 주문을 받아 처리하는 곳. <code>my_api/main.py</code><br><small>배포 위치: Railway</small></div>
+      <div class="a3"><b>📦 창고 = Supabase DB</b>데이터를 실제로 보관하는 곳. <code>messages</code> 표<br><small>Supabase 클라우드</small></div>
+    </div>
+    <div class="note">손님(화면)은 창고(DB)에 <b>직접 가지 않습니다.</b> 반드시 주방장(서버)을 거칩니다. 창고 열쇠(<code>SUPABASE_SECRET_KEY</code>)를 주방장만 갖고 있어서 안전해요.</div>
+  </div>
+
+  <h2>🎬 한 번 따라가 보기</h2>
+  <div class="box">
+    <div class="tabs">
+      <button id="tabPost" class="on">✍️ 메시지 저장하기</button>
+      <button id="tabGet">📖 메시지 불러오기</button>
+      <button id="tabHealth">💓 서버 살아있나 확인</button>
+    </div>
+    <div class="stage">
+      <div class="pipe" id="p01"></div><div class="pipe" id="p12"></div>
+      <div class="node" id="n0"><div class="ic">🙋</div><b>브라우저 (화면)</b><small>frontend/index.html</small></div>
+      <div class="node" id="n1"><div class="ic">👨‍🍳</div><b>FastAPI 서버</b><small>127.0.0.1:8000<br>my_api/main.py</small></div>
+      <div class="node" id="n2"><div class="ic">📦</div><b>Supabase DB</b><small>messages 표</small></div>
+      <div id="pk" class="hide">✉️</div>
+    </div>
+    <div class="say"><div class="st" id="st"></div><div id="tx"></div><pre id="cd"></pre></div>
+    <div class="dots" id="dots"></div>
+    <div class="ctl">
+      <button id="prev">◀ 이전</button>
+      <button id="next" class="main">다음 ▶</button>
+      <button id="auto">⏵ 자동 재생</button>
+    </div>
+  </div>
+
+  <h2>📁 폴더 속 파일은 각각 무슨 일을 하나요?</h2>
+  <div class="box">
+    <table>
+      <tr><th>파일</th><th>쉽게 말하면</th></tr>
+      <tr><td><code>my_api/main.py</code></td><td><b>주방장의 레시피북.</b> “/health 요청 오면 ok라고 답해”, “/messages 요청 오면 창고에서 꺼내줘” 같은 규칙이 적혀 있어요.</td></tr>
+      <tr><td><code>my_api/.env</code></td><td><b>비밀 쪽지.</b> 창고 주소와 열쇠가 적혀 있어요. 절대 인터넷(GitHub)에 올리면 안 됩니다. (<code>.gitignore</code>가 막아줘요)</td></tr>
+      <tr><td><code>my_api/requirements.txt</code></td><td><b>장보기 목록.</b> 서버가 쓰는 도구들(fastapi, supabase …)</td></tr>
+      <tr><td><code>my_api/schema.sql</code></td><td><b>창고 선반 설계도.</b> Supabase에 messages 표를 만드는 명령</td></tr>
+      <tr><td><code>my_api/railway.json</code></td><td><b>Railway에게 주는 가동 지시서.</b> “uvicorn으로 켜고 /health로 살아있는지 확인해”</td></tr>
+      <tr><td><code>frontend/index.html</code></td><td><b>손님이 보는 메뉴판과 주문서.</b> 입력창, 저장 버튼</td></tr>
+      <tr><td><code>frontend/vercel.json</code></td><td>Vercel용 간단 설정</td></tr>
+    </table>
+  </div>
+
+  <h2>🏠 내 컴퓨터 vs ☁️ 인터넷 (127.0.0.1:8000 의 정체)</h2>
+  <div class="two">
+    <div class="box env">
+      <h3><span class="tag" style="background:var(--fe)">지금 하는 것</span>로컬 테스트</h3>
+      <ul>
+        <li><code>127.0.0.1</code> = “<b>바로 이 컴퓨터</b>”를 가리키는 주소. 나만 접속 가능.</li>
+        <li><code>8000</code> = 건물의 <b>호수</b>. 한 컴퓨터에서 여러 프로그램이 번호로 구분돼요.</li>
+        <li>여기서는 <b>Railway가 필요 없습니다.</b> 내 컴퓨터에서 <code>uvicorn main:app</code> 명령으로 파이썬이 main.py를 직접 실행해요.</li>
+        <li>Supabase만 진짜 인터넷 서비스를 씁니다.</li>
+      </ul>
+    </div>
+    <div class="box env">
+      <h3><span class="tag" style="background:var(--api)">나중에</span>배포 (인터넷 공개)</h3>
+      <ul>
+        <li><b>Railway</b>가 “내 컴퓨터 대신 24시간 켜져 있는 컴퓨터”가 되어 같은 main.py를 실행해요.</li>
+        <li><b>Vercel</b>이 화면 파일(frontend)을 전 세계에 보여줘요.</li>
+        <li>그러면 주소가 <code>127.0.0.1:8000</code> → <code>https://내앱.up.railway.app</code> 으로 바뀝니다.</li>
+        <li>비밀 쪽지(.env) 대신 Railway의 <b>Variables</b> 메뉴에 같은 값을 입력해요.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="note">그래서 코드 속 <code>load_dotenv()</code>는 “내 컴퓨터면 .env를 읽고, Railway면 Variables를 쓴다”는 뜻이에요. 같은 코드가 어디서든 동작하는 이유입니다.</div>
+</div>
+
+<script>
+const FLOWS = {
+  post:[
+    {at:0,to:0,pk:"✉️",t:"① 사용자가 입력창에 글을 쓰고 [저장]을 누릅니다.",c:"// frontend/index.html\nfetch(API + \"/messages\", { method:\"POST\", body: {content:\"제주 가고 싶다\"} })"},
+    {at:0,to:1,pk:"✉️ 주문!",t:"② 화면이 주방장(서버)에게 “이 글 저장해줘” 하고 주문서를 보냅니다. 서버 주소는 로컬에선 127.0.0.1:8000 입니다.",c:"POST http://127.0.0.1:8000/messages"},
+    {at:1,to:1,pk:"🛂 검문",t:"③ 서버가 먼저 확인해요. ‘이 화면 주소가 허락된 손님인가?’(CORS), ‘글이 비어있진 않나?’",c:"# main.py\nallow_origins=FRONT_ORIGINS   # .env에 적은 주소만 통과\nif not content: raise HTTPException(400)"},
+    {at:1,to:2,pk:"📝 저장",t:"④ 통과! 서버가 비밀 열쇠를 들고 창고(Supabase)에 글을 넣어달라고 요청합니다.",c:"sb.table(\"messages\").insert({\"content\": content})"},
+    {at:2,to:2,pk:"💾",t:"⑤ Supabase가 messages 표에 새 줄을 추가하고 번호(id)와 시간을 붙입니다.",c:"id | content        | created_at\n 7 | 제주 가고 싶다 | 2026-11-10 ..."},
+    {at:2,to:1,pk:"✅ 완료",t:"⑥ 창고가 “저장했어요” 하고 서버에게 결과를 돌려줍니다.",c:"res.data[0]"},
+    {at:1,to:0,pk:"✅ 저장됨",t:"⑦ 서버가 화면에게 결과를 전달합니다. 화면은 목록을 새로 고쳐서 방금 쓴 글을 보여줘요. 끝! 🎉",c:"return res.data[0]  →  load()  // 목록 다시 불러오기"}
+  ],
+  get:[
+    {at:0,to:0,pk:"📖",t:"① 화면이 열리면 자동으로 ‘저장된 글 목록 보여줘’를 준비합니다.",c:"// frontend/index.html\nfetch(API + \"/messages\")"},
+    {at:0,to:1,pk:"📖 목록 주세요",t:"② 서버에게 목록을 요청합니다.",c:"GET http://127.0.0.1:8000/messages"},
+    {at:1,to:2,pk:"🔎 조회",t:"③ 서버가 창고에 ‘최근 글 50개를 최신순으로 꺼내줘’ 합니다.",c:"sb.table(\"messages\").select(\"*\").order(\"id\", desc=True).limit(50)"},
+    {at:2,to:1,pk:"📦📦📦",t:"④ 창고가 글 목록을 서버에게 줍니다.",c:"[ {id:7, content:\"제주 가고 싶다\"}, ... ]"},
+    {at:1,to:0,pk:"📦📦📦",t:"⑤ 서버가 목록을 화면에게 전달하고, 화면은 이것을 리스트로 그려줍니다. 🎉",c:"return res.data   →   <li>제주 가고 싶다</li>"}
+  ],
+  health:[
+    {at:0,to:0,pk:"💓",t:"① 화면이 열릴 때 가장 먼저 ‘서버 켜져 있어?’ 하고 확인하려 합니다. (Railway도 같은 방법으로 서버 상태를 점검해요)",c:"fetch(API + \"/health\")"},
+    {at:0,to:1,pk:"💓 살아있니?",t:"② 서버에게 가볍게 물어봅니다. 창고까지 갈 필요 없는 간단한 질문이에요.",c:"GET http://127.0.0.1:8000/health"},
+    {at:1,to:0,pk:"🟢 ok",t:"③ 서버가 바로 대답합니다. 화면 위에 초록색 “API: ok”가 뜨면 서버가 켜져 있다는 증거예요. 🎉\n(안 뜨면: 서버를 안 켰거나, 주소가 틀렸거나, CORS 설정 문제!)",c:"@app.get(\"/health\")\ndef health():\n    return {\"status\": \"ok\"}"}
+  ]
+};
+let cur="post", i=0, timer=null;
+const $=id=>document.getElementById(id), pk=$("pk");
+const X=[12,49.5,87]; // 노드 중심(%)
+function pos(n){return `calc(${X[n]}% - 23px)`}
+function render(){
+  const f=FLOWS[cur], s=f[i];
+  [0,1,2].forEach(n=>$("n"+n).classList.toggle("act",n===s.at||n===s.to));
+  pk.classList.remove("hide"); pk.style.left=pos(s.at); pk.textContent=s.pk;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{pk.style.left=pos(s.to)}));
+  $("st").textContent=`단계 ${i+1} / ${f.length}`;
+  $("tx").innerText=s.t; $("cd").textContent=s.c;
+  $("dots").innerHTML=f.map((_,k)=>`<i class="${k<=i?"on":""}"></i>`).join("");
+  $("prev").disabled=i===0; $("next").textContent=i===f.length-1?"↻ 처음부터":"다음 ▶";
+}
+function go(d){const f=FLOWS[cur]; i=(i+d+f.length)%f.length; render()}
+function stop(){clearInterval(timer);timer=null;$("auto").textContent="⏵ 자동 재생"}
+$("next").onclick=()=>{stop();go(1)};
+$("prev").onclick=()=>{stop();go(-1)};
+$("auto").onclick=()=>{ if(timer){stop();return}
+  $("auto").textContent="⏸ 멈춤"; timer=setInterval(()=>go(1),3200); };
+function sw(k,btn){stop();cur=k;i=0;document.querySelectorAll(".tabs button").forEach(b=>b.classList.remove("on"));btn.classList.add("on");render()}
+$("tabPost").onclick=e=>sw("post",e.target);
+$("tabGet").onclick=e=>sw("get",e.target);
+$("tabHealth").onclick=e=>sw("health",e.target);
+render();
+</script>
+</body>
+</html>

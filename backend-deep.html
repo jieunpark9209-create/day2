@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>main.py 속 동작 원리</title>
+<style>
+  :root{--bg:#f6f8fb;--ink:#1d2733;--mut:#5f6f82;--card:#fff;--line:#d9e1ea;
+    --fe:#2f80ed;--api:#27ae60;--db:#9b51e0;--hot:#f2994a;--bad:#e5484d}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif;background:var(--bg);color:var(--ink);line-height:1.65}
+  .wrap{max-width:1000px;margin:0 auto;padding:26px 16px 70px}
+  h1{font-size:1.7rem}.lead{color:var(--mut);margin:6px 0 18px}
+  .nav{position:sticky;top:0;z-index:5;background:rgba(246,248,251,.94);backdrop-filter:blur(6px);padding:10px 0;display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+  .nav a{padding:6px 14px;border-radius:18px;background:#fff;border:1px solid var(--line);color:var(--ink);text-decoration:none;font-size:.92rem}
+  .nav a:hover{background:var(--ink);color:#fff}
+  h2{font-size:1.3rem;margin:38px 0 6px}
+  .sub{color:var(--mut);margin-bottom:12px}
+  .box{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  code{background:#eef2f7;padding:1px 6px;border-radius:5px;font-size:.88em}
+  .ctl{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;align-items:center}
+  .ctl button,.sel button{border:1px solid var(--line);background:#fff;padding:8px 16px;border-radius:20px;cursor:pointer;font:inherit}
+  .ctl button.main{background:var(--hot);color:#fff;border-color:var(--hot);font-weight:700}
+  .ctl button:disabled{opacity:.4;cursor:default}
+  .sel{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  .sel button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .dots{display:flex;gap:5px;margin-left:auto}.dots i{width:22px;height:6px;border-radius:3px;background:var(--line)}.dots i.on{background:var(--hot)}
+  .say{background:#fff8ee;border:1px solid #f6d9b4;border-radius:12px;padding:12px 16px;margin-top:12px;min-height:84px}
+  .say .st{font-size:.8rem;color:var(--hot);font-weight:700}
+  .say.err{background:#fff0f0;border-color:#f3b9bb}.say.err .st{color:var(--bad)}
+
+  /* 코드 해설 */
+  .split{display:grid;grid-template-columns:1.15fr 1fr;gap:14px}
+  @media(max-width:760px){.split{grid-template-columns:1fr}}
+  .code{background:#1e2430;color:#e6edf6;border-radius:12px;padding:10px 0;font:13px/1.7 Consolas,monospace;overflow-x:auto}
+  .code div{padding:0 14px;white-space:pre;border-left:4px solid transparent;transition:background .25s}
+  .code div.on{background:rgba(242,153,74,.22);border-left-color:var(--hot)}
+  .code div.dim{opacity:.35}
+  .code .c{color:#8fa1b8}.code .k{color:#ff9ac1}.code .s{color:#a8e6a1}.code .f{color:#8ecbff}
+  .expl h3{font-size:1.05rem;margin-bottom:6px}
+  .expl p{margin:6px 0}
+  .tip{background:#eaf2fe;border-left:5px solid var(--fe);padding:8px 12px;border-radius:8px;margin-top:8px;font-size:.92rem}
+
+  /* 파이프라인 */
+  .lane{display:flex;align-items:stretch;gap:0;margin:8px 0 4px;overflow-x:auto;padding-bottom:6px}
+  .stg{flex:1;min-width:112px;border:3px solid var(--line);border-radius:14px;padding:10px 6px;text-align:center;background:#fff;position:relative;transition:all .3s}
+  .stg .ic{font-size:1.7rem}.stg b{display:block;font-size:.88rem}.stg small{color:var(--mut);font-size:.72rem;display:block;line-height:1.35}
+  .stg.act{border-color:var(--hot);box-shadow:0 0 0 5px rgba(242,153,74,.3);transform:translateY(-4px)}
+  .stg.bad{border-color:var(--bad);box-shadow:0 0 0 5px rgba(229,72,77,.25)}
+  .stg.done{border-color:var(--api);background:#f1faf4}
+  .arr{align-self:center;color:var(--mut);padding:0 3px;font-size:1.2rem}
+  .pkt{margin:8px 0 0;font:12px/1.5 Consolas,monospace;background:#1e2430;color:#e6edf6;border-radius:10px;padding:10px 14px;white-space:pre-wrap;min-height:62px}
+
+  /* 변환 3단 */
+  .tri{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:6px}
+  @media(max-width:760px){.tri{grid-template-columns:1fr}}
+  .tri>div{border:3px solid var(--line);border-radius:12px;padding:10px;background:#fff;transition:all .3s;opacity:.45}
+  .tri>div.on{opacity:1;border-color:var(--hot);box-shadow:0 0 0 4px rgba(242,153,74,.25)}
+  .tri b{font-size:.85rem;color:var(--mut)}
+  .tri pre{margin-top:6px;font:12px/1.5 Consolas,monospace;white-space:pre-wrap;color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🔬 main.py 속 동작 원리</h1>
+  <p class="lead">코드 한 줄이 실제로 무슨 일을 하는지, 그리고 Railway · FastAPI · Supabase가 각자 어떤 일을 하는지 하나씩 따라가 봅니다.</p>
+
+  <div class="nav">
+    <a href="#s1">① main.py 한 줄씩</a><a href="#s2">② 요청 하나의 여행 (FastAPI)</a>
+    <a href="#s3">③ Railway가 하는 일</a><a href="#s4">④ Supabase가 하는 일</a>
+  </div>
+
+  <!-- ① -->
+  <h2 id="s1">① main.py를 위에서 아래로 읽어보기</h2>
+  <p class="sub">[다음]을 누르면 해당 코드 줄이 밝아지고 오른쪽에 쉬운 설명이 나옵니다. 서버를 켜면 <b>파일이 위에서 아래로 딱 한 번</b> 실행돼요.</p>
+  <div class="box">
+    <div class="split">
+      <div class="code" id="codeBox"></div>
+      <div class="expl" id="explBox"></div>
+    </div>
+    <div class="ctl"><button id="c_prev">◀ 이전</button><button id="c_next" class="main">다음 ▶</button><div class="dots" id="c_dots"></div></div>
+  </div>
+
+  <!-- ② -->
+  <h2 id="s2">② 요청 하나가 FastAPI 안에서 거치는 길</h2>
+  <p class="sub">FastAPI 자체는 “규칙을 적어두는 도구”이고, 실제로 요청을 받아 달리는 건 <b>uvicorn</b>(서버 프로그램)입니다. 상황을 골라서 어디서 통과/차단되는지 보세요.</p>
+  <div class="box">
+    <div class="sel" id="p_sel"></div>
+    <div class="lane" id="lane"></div>
+    <div class="pkt" id="pkt"></div>
+    <div class="say" id="p_say"></div>
+    <div class="ctl"><button id="p_prev">◀ 이전</button><button id="p_next" class="main">다음 ▶</button><div class="dots" id="p_dots"></div></div>
+  </div>
+
+  <!-- ③ -->
+  <h2 id="s3">③ Railway는 무슨 일을 하나요?</h2>
+  <p class="sub">한마디로 <b>“내 코드를 받아서, 인터넷에서 24시간 돌려주는 컴퓨터를 빌려주는 서비스”</b>입니다. 내 노트북에서 하던 <code>uvicorn main:app</code>을 대신 해줍니다.</p>
+  <div class="box">
+    <div class="lane" id="lane3"></div>
+    <div class="pkt" id="pkt3"></div>
+    <div class="say" id="say3"></div>
+    <div class="ctl"><button id="r_prev">◀ 이전</button><button id="r_next" class="main">다음 ▶</button><div class="dots" id="r_dots"></div></div>
+  </div>
+
+  <!-- ④ -->
+  <h2 id="s4">④ Supabase는 무슨 일을 하나요?</h2>
+  <p class="sub">Supabase 안에는 <b>진짜 데이터베이스(PostgreSQL)</b>가 있고, 그 앞에 “인터넷 요청을 DB 명령으로 번역해주는 창구(PostgREST)”가 붙어 있습니다. <code>sb.table(...)</code> 한 줄이 3번 변신해요.</p>
+  <div class="box">
+    <div class="tri" id="tri"></div>
+    <div class="say" id="say4"></div>
+    <div class="ctl"><button id="s_prev">◀ 이전</button><button id="s_next" class="main">다음 ▶</button><div class="dots" id="s_dots"></div></div>
+  </div>
+</div>
+
+<script>
+/* ---------- 공통 스텝 플레이어 ---------- */
+function player(prevId,nextId,dotsId,n,render){
+  let i=0;
+  const p=document.getElementById(prevId), nx=document.getElementById(nextId), d=document.getElementById(dotsId);
+  function draw(){
+    d.innerHTML=Array.from({length:n()},(_,k)=>`<i class="${k<=i?'on':''}"></i>`).join("");
+    p.disabled=i===0; nx.textContent=i===n()-1?"↻ 처음부터":"다음 ▶"; render(i);
+  }
+  p.onclick=()=>{i=Math.max(0,i-1);draw()};
+  nx.onclick=()=>{i=(i+1)%n();draw()};
+  return {reset(){i=0;draw()},draw};
+}
+const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;");
+
+/* ---------- ① 코드 해설 ---------- */
+const CODE=[
+`import os`,
+``,
+`from fastapi import FastAPI, HTTPException`,
+`from fastapi.middleware.cors import CORSMiddleware`,
+`from pydantic import BaseModel`,
+`from dotenv import load_dotenv`,
+`from supabase import create_client`,
+``,
+`load_dotenv()`,
+``,
+`SUPABASE_URL = os.environ["SUPABASE_URL"]`,
+`SUPABASE_SECRET_KEY = os.environ["SUPABASE_SECRET_KEY"]`,
+`FRONT_ORIGINS = [o.strip() for o in os.getenv("FRONT_ORIGINS","").split(",") if o.strip()]`,
+``,
+`sb = create_client(SUPABASE_URL, SUPABASE_SECRET_KEY)`,
+``,
+`app = FastAPI(title="my-api")`,
+``,
+`app.add_middleware(CORSMiddleware, allow_origins=FRONT_ORIGINS, ...)`,
+``,
+`@app.get("/health")`,
+`def health():`,
+`    return {"status": "ok"}`,
+``,
+`class MessageIn(BaseModel):`,
+`    content: str`,
+``,
+`@app.get("/messages")`,
+`def list_messages():`,
+`    res = sb.table("messages").select("*").order("id", desc=True).limit(50).execute()`,
+`    return res.data`,
+``,
+`@app.post("/messages")`,
+`def create_message(body: MessageIn):`,
+`    content = body.content.strip()`,
+`    if not content:`,
+`        raise HTTPException(status_code=400, detail="content is empty")`,
+`    res = sb.table("messages").insert({"content": content}).execute()`,
+`    return res.data[0]`
+];
+const STEPS1=[
+ {l:[0,6],h:"도구 가져오기 (import)",p:["파이썬에게 “이 도구들 쓸 거야” 하고 미리 알려줍니다.","<code>FastAPI</code>=서버 뼈대, <code>BaseModel</code>=받을 데이터의 모양 검사기, <code>create_client</code>=Supabase와 대화하는 전화기."],t:"이 도구들은 requirements.txt(장보기 목록)에 적혀 있어야 설치됩니다."},
+ {l:[8,8],h:"비밀 쪽지(.env) 읽기",p:["<code>load_dotenv()</code>가 <code>.env</code> 파일의 내용을 ‘환경 변수’라는 메모판에 옮겨 적습니다.","Railway에서는 .env 파일이 없고 Variables가 이미 메모판에 있어서, 이 줄은 그냥 아무 일도 안 해요."],t:"그래서 같은 코드가 내 컴퓨터와 Railway 양쪽에서 동작합니다."},
+ {l:[10,12],h:"메모판에서 값 꺼내기",p:["<code>os.environ[\"SUPABASE_URL\"]</code> = 메모판에서 창고 주소를 꺼냅니다. <b>없으면 여기서 바로 에러</b>로 서버가 꺼집니다.(꼭 필요한 값이라는 뜻)","<code>FRONT_ORIGINS</code>는 “우리 서버에 말 걸어도 되는 화면 주소 목록”으로, 쉼표로 쪼개 리스트로 만듭니다."],t:"지금 .env가 비어 있으면 ‘KeyError: SUPABASE_URL’이 뜨는 이유가 바로 이 줄입니다."},
+ {l:[14,14],h:"Supabase와 전화 연결",p:["주소와 비밀 열쇠로 <code>sb</code>라는 전화기를 만듭니다. 이후 <code>sb.table(...)</code>로 창고에 말을 걸어요.","전화를 거는 건 아직 아니고, ‘연결 준비’만 해두는 단계입니다."],t:"열쇠는 서버 안에만 있고 손님(브라우저)에게는 절대 전달되지 않아요."},
+ {l:[16,16],h:"FastAPI 앱 만들기",p:["<code>app</code>은 “주문 접수 데스크”입니다. 이제부터 <code>@app.get</code> 같은 표시로 어떤 주소로 오면 어떤 함수가 일할지 등록해요.","uvicorn은 <code>main:app</code> = ‘main.py 파일의 app’을 찾아 실행합니다."],t:"Railway의 시작 명령 <code>uvicorn main:app</code>의 ‘main:app’이 바로 이것!"},
+ {l:[18,18],h:"CORS: 출입 허가 명단",p:["브라우저는 보안상 <b>다른 주소의 서버</b>에 요청할 때 “이 화면 주소가 서버에서 허락됐나?”를 먼저 확인합니다.","화면은 localhost:5500, 서버는 localhost:8000으로 주소가 달라서 이 명단이 없으면 브라우저가 막아버려요."],t:"‘API 연결 실패’의 흔한 원인 1순위. FRONT_ORIGINS에 화면 주소를 적어야 합니다."},
+ {l:[20,22],h:"첫 번째 주문 등록: /health",p:["<code>@app.get(\"/health\")</code> = “GET 방식으로 /health 주소가 오면 바로 아래 함수를 실행해”.","함수는 <code>{\"status\":\"ok\"}</code>를 돌려주고, FastAPI가 이걸 JSON 글자로 자동 변환해 응답합니다."],t:"Railway도 이 주소를 두드려서 서버가 살아있는지 확인해요."},
+ {l:[24,25],h:"받을 데이터의 모양 정하기",p:["<code>MessageIn</code>은 “주문서 양식”입니다. <code>content</code>라는 칸에 <b>글자(str)</b>가 들어와야 한다고 적었어요.","양식과 다르게 오면 FastAPI가 알아서 거절합니다(422 에러)."],t:"직접 검사 코드를 짤 필요가 없는 게 FastAPI의 큰 장점입니다."},
+ {l:[27,30],h:"두 번째 주문: 목록 조회",p:["GET /messages → 창고에서 messages 표를 가져옵니다.","<code>select(\"*\")</code>=모든 칸, <code>order(\"id\",desc=True)</code>=최신순, <code>limit(50)</code>=50개까지, <code>execute()</code>=<b>이때 실제로 전화를 겁니다</b>."],t:"앞부분 .select().order()... 는 주문서를 쓰는 중이고, execute()가 전송 버튼입니다."},
+ {l:[32,38],h:"세 번째 주문: 저장",p:["POST /messages → 손님이 보낸 글을 <code>body: MessageIn</code> 양식으로 받습니다. 양식 검사는 함수 실행 <b>전에</b> 끝나 있어요.","공백만 지우고(<code>strip</code>) 비어있으면 400 에러로 돌려보냅니다. 괜찮으면 <code>insert</code>로 창고에 저장하고 저장된 줄을 돌려줘요."],t:"HTTPException = ‘이 주문은 못 받아요’ 하고 오류 번호와 이유를 응답하는 방법."}
+];
+const codeBox=document.getElementById("codeBox"), explBox=document.getElementById("explBox");
+function hl(line){
+  if(!line.trim())return " ";
+  let s=esc(line);
+  s=s.replace(/^(\s*)(import|from|def|class|if|raise|return)\b/,'$1<span class="k">$2</span>')
+     .replace(/\b(import)\b/g,'<span class="k">$1</span>')
+     .replace(/("[^"]*")/g,'<span class="s">$1</span>')
+     .replace(/^(@app\.\w+)/,'<span class="f">$1</span>');
+  return s;
+}
+codeBox.innerHTML=CODE.map((l,n)=>`<div data-n="${n}">${hl(l)}</div>`).join("");
+const pc=player("c_prev","c_next","c_dots",()=>STEPS1.length,i=>{
+  const s=STEPS1[i];
+  codeBox.querySelectorAll("div").forEach(d=>{const n=+d.dataset.n;const on=n>=s.l[0]&&n<=s.l[1];d.classList.toggle("on",on);d.classList.toggle("dim",!on)});
+  codeBox.querySelector(`[data-n="${s.l[0]}"]`).scrollIntoView({block:"nearest",behavior:"smooth"});
+  explBox.innerHTML=`<h3>${i+1}. ${s.h}</h3>${s.p.map(x=>`<p>${x}</p>`).join("")}<div class="tip">💡 ${s.t}</div>`;
+});
+
+/* ---------- ② 요청의 여행 ---------- */
+const STAGES=[
+ {ic:"🌐",n:"네트워크",s:"요청이 도착"},
+ {ic:"🚪",n:"uvicorn",s:"요청을 읽어 FastAPI에 전달"},
+ {ic:"🛂",n:"CORS 미들웨어",s:"허락된 화면 주소?"},
+ {ic:"🧭",n:"라우터",s:"주소+방식에 맞는 함수 찾기"},
+ {ic:"📋",n:"Pydantic 검사",s:"데이터 모양 확인"},
+ {ic:"⚙️",n:"내 함수",s:"create_message()"},
+ {ic:"📤",n:"응답 변환",s:"파이썬 → JSON 글자"}
+];
+const SCEN={
+ ok:{label:"✅ 정상 저장",steps:[
+  {a:0,pk:"POST /messages HTTP/1.1\nOrigin: http://localhost:5500\nContent-Type: application/json\n\n{\"content\":\"제주 가고 싶다\"}",t:"브라우저가 보낸 요청 글자(HTTP)가 8000번 포트로 도착했습니다."},
+  {a:1,pk:"(요청을 해석)\n방식=POST  주소=/messages  본문=JSON",t:"uvicorn이 요청 글자를 읽고 ‘방식, 주소, 본문’으로 나눠 FastAPI 앱(app)에게 넘깁니다."},
+  {a:2,pk:"Origin: http://localhost:5500\nFRONT_ORIGINS = [localhost:5500, ...]  → 명단에 있음 ✔",t:"명단에 있는 화면에서 온 요청이라 통과! 나중에 응답에 ‘허락함’ 표시도 붙여줍니다."},
+  {a:3,pk:"POST + /messages  →  create_message 함수",t:"@app.post(\"/messages\")라고 등록해둔 함수를 찾았어요. 같은 주소라도 GET이면 list_messages로 갑니다."},
+  {a:4,pk:"{\"content\":\"제주 가고 싶다\"}  →  MessageIn(content=\"제주 가고 싶다\") ✔",t:"content가 글자(str)라서 양식에 맞음. 이제 body라는 이름의 파이썬 객체가 됩니다."},
+  {a:5,pk:"content = body.content.strip()\nsb.table(\"messages\").insert(...).execute()\n→ Supabase에 저장 요청 (④번 참고)",t:"드디어 내가 짠 코드가 실행됩니다. 앞의 과정은 FastAPI가 알아서 처리했어요."},
+  {a:6,pk:"{\"id\":7,\"content\":\"제주 가고 싶다\",...}  →  HTTP 200\nAccess-Control-Allow-Origin: http://localhost:5500",t:"함수가 돌려준 파이썬 딕셔너리를 JSON 글자로 바꿔 브라우저로 돌려보냅니다."}
+ ]},
+ empty:{label:"⚠️ 빈 글 저장 (400)",steps:[
+  {a:0,pk:"POST /messages\n{\"content\":\"   \"}",t:"공백만 적은 글이 도착했습니다."},
+  {a:2,pk:"허락된 화면 ✔",t:"CORS 통과."},
+  {a:4,pk:"content=\"   \"  →  str 맞음 ✔",t:"‘공백도 글자’라서 양식 검사는 통과해요. 의미까지 검사하는 건 내 코드의 몫입니다."},
+  {a:5,pk:"content = \"   \".strip()  →  \"\"\nif not content:\n    raise HTTPException(400)",t:"strip()으로 공백을 지우니 빈 글. 내가 직접 짠 검사에 걸려서 중단합니다.",bad:true},
+  {a:6,pk:"HTTP 400\n{\"detail\":\"content is empty\"}",t:"“400: 요청이 잘못됐어요” 라는 답이 갑니다. 창고(Supabase)까지는 가지도 않았어요.",bad:true,err:true}
+ ]},
+ bad:{label:"❌ 양식 틀림 (422)",steps:[
+  {a:0,pk:"POST /messages\n{\"text\":\"안녕\"}",t:"content 대신 text라는 이름으로 잘못 보냈습니다."},
+  {a:2,pk:"허락된 화면 ✔",t:"CORS 통과."},
+  {a:3,pk:"POST + /messages → create_message",t:"함수는 제대로 찾았어요."},
+  {a:4,pk:"MessageIn 에는 content 칸이 필요한데 없음!",t:"Pydantic이 양식 검사에서 바로 거절합니다. <b>내 함수는 실행되지도 않아요.</b>",bad:true},
+  {a:6,pk:"HTTP 422\n{\"detail\":[{\"loc\":[\"body\",\"content\"],\"msg\":\"Field required\"}]}",t:"“422: 양식이 안 맞아요 — content 칸이 없어요” 하고 FastAPI가 자동으로 친절하게 알려줍니다.",bad:true,err:true}
+ ]},
+ cors:{label:"🚫 허락 안 된 화면 (CORS)",steps:[
+  {a:0,pk:"POST /messages\nOrigin: http://localhost:3000   ← 명단에 없는 주소",t:"포트 3000번에서 열린 화면이 요청했습니다. FRONT_ORIGINS에는 5500만 적혀 있어요."},
+  {a:2,pk:"Origin: http://localhost:3000\nFRONT_ORIGINS = [localhost:5500]  → 없음 ✘",t:"서버 응답에 ‘허락함’ 표시(Access-Control-Allow-Origin)가 붙지 않습니다.",bad:true},
+  {a:6,pk:"(응답에 허락 표시 없음)",t:"요청은 서버까지 갔다 오지만, <b>브라우저가 응답을 화면 코드에 넘겨주지 않고</b> 콘솔에 CORS 에러를 띄웁니다. 그래서 ‘API 연결 실패’로 보여요. 해결: FRONT_ORIGINS에 그 주소 추가.",bad:true,err:true}
+ ]}
+};
+let curS="ok";
+document.getElementById("p_sel").innerHTML=Object.entries(SCEN).map(([k,v])=>`<button data-k="${k}" class="${k===curS?'on':''}">${v.label}</button>`).join("");
+document.getElementById("lane").innerHTML=STAGES.map((s,i)=>`${i?'<div class="arr">›</div>':''}<div class="stg" id="g${i}"><div class="ic">${s.ic}</div><b>${s.n}</b><small>${s.s}</small></div>`).join("");
+const pp=player("p_prev","p_next","p_dots",()=>SCEN[curS].steps.length,i=>{
+  const st=SCEN[curS].steps[i];
+  STAGES.forEach((_,k)=>{const g=document.getElementById("g"+k);g.className="stg";
+    if(k===st.a)g.classList.add(st.bad?"bad":"act"); else if(k<st.a)g.classList.add("done");});
+  document.getElementById("pkt").textContent=st.pk;
+  const sy=document.getElementById("p_say");sy.className="say"+(st.err?" err":"");
+  sy.innerHTML=`<div class="st">단계 ${i+1} / ${SCEN[curS].steps.length}</div>${st.t}`;
+});
+document.getElementById("p_sel").onclick=e=>{const k=e.target.dataset.k;if(!k)return;curS=k;
+  document.querySelectorAll("#p_sel button").forEach(b=>b.classList.toggle("on",b.dataset.k===k));pp.reset()};
+
+/* ---------- ③ Railway ---------- */
+const RW=[
+ {ic:"💻",n:"git push",s:"코드 올리기"},{ic:"🏗️",n:"빌드",s:"설치 & 포장"},{ic:"🚀",n:"배포",s:"컨테이너 실행"},{ic:"💓",n:"헬스체크",s:"/health 확인"},{ic:"🌍",n:"공개 주소",s:"인터넷 연결"}
+];
+const RWS=[
+ {a:0,pk:"git push  →  GitHub 저장소의 my_api 폴더가 갱신됨",t:"GitHub에 코드를 올리면 Railway가 ‘새 코드가 왔네!’ 하고 감지합니다. (또는 CLI로 직접 올림) 이때 <b>.env는 올라가지 않아요</b> — 그래서 .gitignore가 중요합니다."},
+ {a:1,pk:"requirements.txt 발견 → 파이썬 프로젝트로 판단\npip install fastapi uvicorn supabase python-dotenv\n→ 실행 가능한 ‘컨테이너 이미지’로 포장",t:"Railway의 빌더가 폴더를 살펴보고 파이썬 프로젝트임을 알아챕니다. 장보기 목록(requirements.txt)대로 도구를 설치해 ‘도시락’처럼 포장해요. 그래서 이 파일이 꼭 필요합니다."},
+ {a:2,pk:"환경변수 주입: SUPABASE_URL, SUPABASE_SECRET_KEY, FRONT_ORIGINS, PORT=(Railway가 정한 번호)\n실행: uvicorn main:app --host 0.0.0.0 --port $PORT",t:"포장된 도시락을 Railway의 컴퓨터에서 열고, <b>Variables 메뉴에 적은 값</b>을 메모판(환경변수)에 올려둡니다. 그 후 railway.json의 시작 명령으로 서버를 켜요. 내 컴퓨터에선 8000번이었지만 여기선 Railway가 정해준 PORT를 씁니다. 0.0.0.0은 ‘바깥에서 오는 요청도 받겠다’는 뜻."},
+ {a:3,pk:"Railway → GET /health\n서버 ← {\"status\":\"ok\"}  ✔  → 정상 판정, 새 버전으로 교체",t:"서버가 제대로 켜졌는지 /health를 두드려 확인합니다. 응답이 없으면 새 버전을 적용하지 않고 이전 버전을 유지해요(그래서 아까 만든 /health가 꼭 필요)."},
+ {a:4,pk:"https://my-api.up.railway.app  →  (Railway 입구)  →  내 컨테이너의 PORT",t:"Railway가 공개 주소를 만들어주고, 그 주소로 온 요청을 내 컨테이너로 전달합니다. 이제 <code>frontend</code>의 API 주소를 이 주소로 바꾸면 전 세계 누구나 쓸 수 있어요. 🎉"}
+];
+document.getElementById("lane3").innerHTML=RW.map((s,i)=>`${i?'<div class="arr">›</div>':''}<div class="stg" id="r${i}"><div class="ic">${s.ic}</div><b>${s.n}</b><small>${s.s}</small></div>`).join("");
+player("r_prev","r_next","r_dots",()=>RWS.length,i=>{
+  const st=RWS[i];
+  RW.forEach((_,k)=>{document.getElementById("r"+k).className="stg"+(k===st.a?" act":k<st.a?" done":"")});
+  document.getElementById("pkt3").textContent=st.pk;
+  document.getElementById("say3").innerHTML=`<div class="st">단계 ${i+1} / ${RWS.length}</div>${st.t}`;
+}).reset();
+
+/* ---------- ④ Supabase ---------- */
+const SB=[
+ {on:[0],t:"파이썬 코드가 ‘주문서’를 씁니다. 아직 아무 데도 안 갔어요. .execute()를 부르는 순간 출발합니다.",
+  py:'sb.table("messages")\n  .insert({"content": "제주 가고 싶다"})\n  .execute()',http:"(대기 중)",sql:"(대기 중)"},
+ {on:[0,1],t:"supabase 도구가 이 코드를 <b>인터넷 요청(HTTPS)</b>으로 번역해서 보냅니다. 비밀 열쇠(apikey)가 함께 실려가요. 이 때문에 SUPABASE_URL 주소가 필요한 거예요.",
+  py:'sb.table("messages")\n  .insert({"content": "제주 가고 싶다"})\n  .execute()',http:"POST https://프로젝트ID.supabase.co\n     /rest/v1/messages\napikey: (비밀 열쇠)\nBody: {\"content\":\"제주 가고 싶다\"}",sql:"(대기 중)"},
+ {on:[1,2],t:"Supabase 입구의 <b>PostgREST</b>가 요청을 받고 ‘열쇠 확인’을 합니다. 시크릿 키는 <b>RLS(행 단위 보안)라는 잠금장치를 건너뛸 수 있는 관리자 열쇠</b>예요. 그래서 서버에서만 써야 하고, 화면 코드에 넣으면 누구나 DB를 마음대로 할 수 있게 됩니다.",
+  py:"(서버 코드 대기)",http:"열쇠 확인 ✔ (secret 키 → RLS 우회)\n표 이름: messages\n방식: POST = 추가",sql:'INSERT INTO messages (content)\nVALUES (\'제주 가고 싶다\')\nRETURNING *;'},
+ {on:[2],t:"진짜 데이터베이스(PostgreSQL)가 표에 새 줄을 씁니다. id(번호)와 created_at(시간)은 schema.sql에서 ‘자동으로 채워라’ 하고 정해둔 칸이에요.",
+  py:"(서버 코드 대기)",http:"(DB가 처리 중)",sql:"messages 표\nid | content         | created_at\n 7 | 제주 가고 싶다  | 2026-11-10 …  ← 새 줄"},
+ {on:[2,1,0],t:"결과가 왔던 길을 거꾸로 돌아갑니다. SQL 결과 → JSON → 파이썬 데이터. 그래서 코드에서 <code>res.data[0]</code>으로 꺼내 쓸 수 있어요.",
+  py:'res.data[0]\n→ {"id":7,"content":"제주 가고 싶다",...}',http:"HTTP 201 Created\n[{\"id\":7,\"content\":\"제주 가고 싶다\",...}]",sql:"RETURNING * 결과 1줄"}
+];
+document.getElementById("tri").innerHTML=`<div><b>🐍 파이썬 (main.py)</b><pre id="t0"></pre></div><div><b>🌐 인터넷 요청 (PostgREST)</b><pre id="t1"></pre></div><div><b>🗄️ 데이터베이스 명령 (SQL)</b><pre id="t2"></pre></div>`;
+player("s_prev","s_next","s_dots",()=>SB.length,i=>{
+  const s=SB[i],k=document.getElementById("tri").children;
+  [...k].forEach((c,n)=>c.classList.toggle("on",s.on.includes(n)));
+  document.getElementById("t0").textContent=s.py;document.getElementById("t1").textContent=s.http;document.getElementById("t2").textContent=s.sql;
+  document.getElementById("say4").innerHTML=`<div class="st">단계 ${i+1} / ${SB.length}</div>${s.t}`;
+}).reset();
+
+pc.reset(); pp.reset();
+</script>
+</body>
+</html>
