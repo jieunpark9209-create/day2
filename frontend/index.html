@@ -3,48 +3,223 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Full-stack 테스트</title>
+<title>제주 마켓</title>
 <style>
-  body{font-family:"Malgun Gothic",sans-serif;max-width:560px;margin:40px auto;padding:0 16px}
-  #status{padding:8px 12px;border-radius:8px;background:#eee;margin-bottom:16px}
-  .ok{background:#d8f5df!important}.bad{background:#fbd9d9!important}
-  form{display:flex;gap:8px;margin-bottom:16px}
-  input{flex:1;padding:8px}button{padding:8px 16px}
-  li{padding:6px 0;border-bottom:1px solid #eee}
+  :root{
+    --bg:#fdf8f1; --card:#fff; --ink:#26302f; --muted:#7a8683;
+    --sea:#0e7c86; --sea-d:#0a5a62; --orange:#ff9f1c; --orange-d:#e88a05;
+    --line:#eee6da; --danger:#d9534f;
+    --shadow:0 6px 20px rgba(14,60,66,.08);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#101818; --card:#182423; --ink:#e8f0ee; --muted:#93a5a1; --line:#25403d; --shadow:0 6px 20px rgba(0,0,0,.4); }
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.6}
+  button{font:inherit;cursor:pointer;border:0;background:none;color:inherit}
+  button:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+
+  /* 상단바 */
+  .top{position:sticky;top:0;z-index:20;display:flex;justify-content:space-between;align-items:center;
+       padding:14px 5vw;background:var(--sea-d);color:#fff}
+  .brand{font-size:1.25rem;font-weight:700}
+  .cart-btn{position:relative;display:flex;align-items:center;gap:8px;padding:8px 16px;border-radius:24px;background:rgba(255,255,255,.15);color:#fff;font-weight:600;transition:background .2s}
+  .cart-btn:hover{background:rgba(255,255,255,.28)}
+  .badge{min-width:22px;height:22px;padding:0 6px;border-radius:11px;background:var(--orange);color:#fff;font-size:.8rem;display:grid;place-items:center}
+  .badge.bump{animation:bump .35s}
+  @keyframes bump{50%{transform:scale(1.4)}}
+
+  .hero{padding:44px 5vw 20px;max-width:1100px;margin:0 auto}
+  .hero h1{font-size:clamp(1.6rem,4vw,2.3rem);color:var(--sea)}
+  .hero p{color:var(--muted)}
+  #status{max-width:1100px;margin:0 auto;padding:0 5vw}
+  .notice{margin:12px 0;padding:10px 14px;border-radius:10px;background:#fde8e7;color:#8a2b27;font-size:.92rem}
+
+  /* 상품 */
+  .grid{max-width:1100px;margin:0 auto;padding:12px 5vw 80px;display:grid;gap:20px;grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
+  .product{background:var(--card);border-radius:16px;box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column;transition:transform .2s}
+  .product:hover{transform:translateY(-4px)}
+  .thumb{height:130px;display:grid;place-items:center;font-size:3.6rem;background:linear-gradient(135deg,#ffe9cc,#d9f0ee)}
+  .pbody{padding:16px 18px 18px;display:flex;flex-direction:column;gap:6px;flex:1}
+  .pbody h3{font-size:1.05rem}
+  .pbody p{font-size:.88rem;color:var(--muted);flex:1}
+  .price{font-weight:700;color:var(--sea);font-size:1.1rem}
+  .add{margin-top:8px;padding:10px;border-radius:10px;background:var(--orange);color:#fff;font-weight:700;transition:background .2s,transform .1s}
+  .add:hover{background:var(--orange-d)} .add:active{transform:scale(.97)}
+  .skeleton{height:280px;border-radius:16px;background:linear-gradient(90deg,var(--line) 25%,transparent 50%,var(--line) 75%);background-size:200% 100%;animation:sh 1.3s infinite}
+  @keyframes sh{to{background-position:-200% 0}}
+
+  /* 장바구니 서랍 */
+  .overlay{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.45);opacity:0;pointer-events:none;transition:opacity .25s}
+  .overlay.open{opacity:1;pointer-events:auto}
+  .drawer{position:fixed;top:0;right:0;bottom:0;z-index:40;width:min(420px,100vw);background:var(--card);
+          display:flex;flex-direction:column;transform:translateX(100%);transition:transform .3s ease;box-shadow:-8px 0 30px rgba(0,0,0,.2)}
+  .drawer.open{transform:none}
+  .dhead{display:flex;justify-content:space-between;align-items:center;padding:18px 20px;border-bottom:1px solid var(--line)}
+  .dhead h2{font-size:1.15rem}
+  .x{width:36px;height:36px;border-radius:50%;font-size:1.3rem;color:var(--muted)} .x:hover{background:var(--line)}
+  .items{flex:1;overflow-y:auto;padding:8px 20px;list-style:none}
+  .item{display:grid;grid-template-columns:52px 1fr auto;gap:12px;align-items:center;padding:14px 0;border-bottom:1px solid var(--line)}
+  .item .em{width:52px;height:52px;border-radius:12px;display:grid;place-items:center;font-size:1.8rem;background:linear-gradient(135deg,#ffe9cc,#d9f0ee)}
+  .item .nm{font-weight:600;font-size:.95rem}
+  .item .sub{font-size:.85rem;color:var(--muted)}
+  .qty{display:flex;align-items:center;gap:4px;margin-top:6px}
+  .qty button{width:28px;height:28px;border-radius:8px;border:1px solid var(--line);font-weight:700}
+  .qty button:hover{background:var(--line)}
+  .qty span{min-width:26px;text-align:center;font-weight:600}
+  .del{color:var(--danger);font-size:.82rem;padding:4px 6px;border-radius:6px} .del:hover{background:#fde8e7}
+  .empty{text-align:center;color:var(--muted);padding:70px 0}
+  .empty b{display:block;font-size:3rem;margin-bottom:8px}
+  .dfoot{padding:18px 20px;border-top:1px solid var(--line);display:grid;gap:12px}
+  .total{display:flex;justify-content:space-between;font-size:1.1rem;font-weight:700}
+  .total em{font-style:normal;color:var(--sea);font-size:1.3rem}
+  .order{padding:14px;border-radius:12px;background:var(--sea);color:#fff;font-weight:700;font-size:1rem}
+  .order:hover:not(:disabled){background:var(--sea-d)} .order:disabled{opacity:.4;cursor:not-allowed}
+  .clear{color:var(--muted);font-size:.85rem;text-decoration:underline;justify-self:center}
+
+  .toast{position:fixed;left:50%;bottom:28px;z-index:50;transform:translate(-50%,30px);opacity:0;padding:12px 20px;border-radius:24px;
+         background:#222;color:#fff;font-size:.92rem;transition:.3s;pointer-events:none}
+  .toast.show{transform:translate(-50%,0);opacity:1}
+  @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
-<h1>Full-stack 테스트</h1>
-<div id="status">API 확인 중...</div>
-<form id="f"><input id="t" placeholder="메시지 입력" required><button>저장</button></form>
-<ul id="list"></ul>
+
+<header class="top">
+  <div class="brand">🍊 제주 마켓</div>
+  <button class="cart-btn" id="openCart" aria-label="장바구니 열기">🛒 장바구니 <span class="badge" id="badge">0</span></button>
+</header>
+
+<section class="hero">
+  <h1>제주의 맛, 집에서 만나요</h1>
+  <p>담아둔 장바구니는 서버(Supabase)에 저장되어 새로고침해도 그대로 남아 있어요.</p>
+</section>
+<div id="status"></div>
+<main class="grid" id="grid" aria-live="polite">
+  <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+</main>
+
+<div class="overlay" id="overlay"></div>
+<aside class="drawer" id="drawer" aria-label="장바구니" aria-hidden="true">
+  <div class="dhead"><h2>🛒 장바구니</h2><button class="x" id="closeCart" aria-label="닫기">✕</button></div>
+  <ul class="items" id="items"></ul>
+  <div class="dfoot">
+    <div class="total"><span>합계</span><em id="total">0원</em></div>
+    <button class="order" id="order" disabled>주문하기</button>
+    <button class="clear" id="clear">장바구니 비우기</button>
+  </div>
+</aside>
+<div class="toast" id="toast" role="status"></div>
+
 <script>
-// 배포 시 Railway 주소로 교체 (예: https://my-api.up.railway.app)
-const API = location.hostname === "localhost" || location.hostname === "127.0.0.1"
+// 배포 후 Railway 주소로 교체하세요 (예: https://my-api.up.railway.app)
+const API = ["localhost","127.0.0.1"].includes(location.hostname)
   ? "http://localhost:8000"
   : "https://YOUR-RAILWAY-URL.up.railway.app";
 
-const $ = id => document.getElementById(id);
-async function load(){
-  const r = await fetch(API + "/messages");
-  if(!r.ok) throw new Error("messages " + r.status);
-  const data = await r.json();
-  $("list").innerHTML = data.map(m => `<li>${m.content.replace(/</g,"&lt;")}</li>`).join("");
+// 로그인 없이 브라우저마다 고유한 장바구니 ID를 발급
+function getCartId(){
+  try{
+    let id = localStorage.getItem("cart_id");
+    if(!id){ id = crypto.randomUUID(); localStorage.setItem("cart_id", id); }
+    return id;
+  }catch{ return window.__cid ??= crypto.randomUUID(); }
 }
+const CART = getCartId();
+
+const $ = id => document.getElementById(id);
+const won = n => n.toLocaleString("ko-KR") + "원";
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+async function api(path, opts = {}){
+  const r = await fetch(API + path, {headers:{"Content-Type":"application/json"}, ...opts});
+  if(!r.ok) throw new Error("서버 오류 " + r.status);
+  return r.json();
+}
+
+let cart = {items:[], count:0, total:0};
+let busy = false;
+
+function toast(msg){
+  const t = $("toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("show"), 1800);
+}
+function setError(msg){ $("status").innerHTML = msg ? `<div class="notice">${esc(msg)}</div>` : ""; }
+
+function renderCart(){
+  const b = $("badge"); b.textContent = cart.count; b.classList.remove("bump"); void b.offsetWidth; b.classList.add("bump");
+  $("total").textContent = won(cart.total);
+  $("order").disabled = cart.count === 0;
+  $("clear").style.display = cart.count ? "" : "none";
+  $("items").innerHTML = cart.items.length ? cart.items.map(i => `
+    <li class="item">
+      <div class="em">${esc(i.emoji)}</div>
+      <div>
+        <div class="nm">${esc(i.name)}</div>
+        <div class="sub">${won(i.price)} · 소계 ${won(i.subtotal)}</div>
+        <div class="qty">
+          <button data-act="dec" data-id="${i.product_id}" aria-label="수량 줄이기">−</button>
+          <span>${i.quantity}</span>
+          <button data-act="inc" data-id="${i.product_id}" aria-label="수량 늘리기">+</button>
+        </div>
+      </div>
+      <button class="del" data-act="del" data-id="${i.product_id}">삭제</button>
+    </li>`).join("")
+    : `<li class="empty"><b>🧺</b>장바구니가 비어 있어요</li>`;
+}
+
+async function mutate(fn, okMsg){
+  if(busy) return; busy = true;
+  try{ cart = await fn(); setError(""); renderCart(); if(okMsg) toast(okMsg); }
+  catch(e){ toast("⚠️ " + e.message); }
+  finally{ busy = false; }
+}
+
+const add = id => mutate(() => api(`/cart/${CART}/items`, {method:"POST", body:JSON.stringify({product_id:id, quantity:1})}), "장바구니에 담았어요 🍊");
+const setQty = (id, q) => mutate(() => api(`/cart/${CART}/items/${id}`, {method:"PUT", body:JSON.stringify({quantity:q})}));
+const del = id => mutate(() => api(`/cart/${CART}/items/${id}`, {method:"DELETE"}), "삭제했어요");
+
+$("items").addEventListener("click", e => {
+  const btn = e.target.closest("button[data-act]"); if(!btn) return;
+  const id = +btn.dataset.id, cur = cart.items.find(i => i.product_id === id);
+  if(btn.dataset.act === "inc") setQty(id, Math.min(cur.quantity + 1, 99));
+  if(btn.dataset.act === "dec") setQty(id, cur.quantity - 1);   // 0이 되면 서버가 삭제
+  if(btn.dataset.act === "del") del(id);
+});
+$("grid").addEventListener("click", e => {
+  const btn = e.target.closest("button[data-add]"); if(btn) add(+btn.dataset.add);
+});
+$("clear").onclick = () => { if(confirm("장바구니를 모두 비울까요?")) mutate(() => api(`/cart/${CART}`, {method:"DELETE"}), "비웠어요"); };
+$("order").onclick = () => toast("주문/결제는 다음 단계에서 만들어요 🚧");
+
+function openDrawer(o){
+  $("drawer").classList.toggle("open", o); $("overlay").classList.toggle("open", o);
+  $("drawer").setAttribute("aria-hidden", !o);
+  if(o) $("closeCart").focus(); else $("openCart").focus();
+}
+$("openCart").onclick = () => openDrawer(true);
+$("closeCart").onclick = $("overlay").onclick = () => openDrawer(false);
+document.addEventListener("keydown", e => { if(e.key === "Escape") openDrawer(false); });
+
 async function init(){
   try{
-    const h = await fetch(API + "/health").then(r => r.json());
-    $("status").textContent = "API: " + h.status; $("status").className = "ok";
-    await load();
+    const [products, c] = await Promise.all([api("/products"), api(`/cart/${CART}`)]);
+    $("grid").innerHTML = products.map(p => `
+      <article class="product">
+        <div class="thumb">${esc(p.emoji)}</div>
+        <div class="pbody">
+          <h3>${esc(p.name)}</h3><p>${esc(p.description)}</p>
+          <div class="price">${won(p.price)}</div>
+          <button class="add" data-add="${p.id}">🛒 담기</button>
+        </div>
+      </article>`).join("") || `<p class="empty">등록된 상품이 없어요.</p>`;
+    cart = c; renderCart();
   }catch(e){
-    $("status").textContent = "API 연결 실패: " + e.message; $("status").className = "bad";
+    $("grid").innerHTML = "";
+    setError("서버에 연결하지 못했어요 (" + e.message + "). API 주소와 서버 상태를 확인해 주세요.");
+    renderCart();
   }
 }
-$("f").onsubmit = async e => {
-  e.preventDefault();
-  const r = await fetch(API + "/messages", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({content:$("t").value})});
-  if(r.ok){ $("t").value=""; load(); } else alert("저장 실패: " + r.status);
-};
 init();
 </script>
 </body>

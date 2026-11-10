@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Full-stack 테스트</title>
+<style>
+  body{font-family:"Malgun Gothic",sans-serif;max-width:560px;margin:40px auto;padding:0 16px}
+  #status{padding:8px 12px;border-radius:8px;background:#eee;margin-bottom:16px}
+  .ok{background:#d8f5df!important}.bad{background:#fbd9d9!important}
+  form{display:flex;gap:8px;margin-bottom:16px}
+  input{flex:1;padding:8px}button{padding:8px 16px}
+  li{padding:6px 0;border-bottom:1px solid #eee}
+</style>
+</head>
+<body>
+<h1>Full-stack 테스트</h1>
+<div id="status">API 확인 중...</div>
+<form id="f"><input id="t" placeholder="메시지 입력" required><button>저장</button></form>
+<ul id="list"></ul>
+<script>
+// 배포 시 Railway 주소로 교체 (예: https://my-api.up.railway.app)
+const API = location.hostname === "localhost" || location.hostname === "127.0.0.1"
+  ? "http://localhost:8000"
+  : "https://YOUR-RAILWAY-URL.up.railway.app";
+
+const $ = id => document.getElementById(id);
+async function load(){
+  const r = await fetch(API + "/messages");
+  if(!r.ok) throw new Error("messages " + r.status);
+  const data = await r.json();
+  $("list").innerHTML = data.map(m => `<li>${m.content.replace(/</g,"&lt;")}</li>`).join("");
+}
+async function init(){
+  try{
+    const h = await fetch(API + "/health").then(r => r.json());
+    $("status").textContent = "API: " + h.status; $("status").className = "ok";
+    await load();
+  }catch(e){
+    $("status").textContent = "API 연결 실패: " + e.message; $("status").className = "bad";
+  }
+}
+$("f").onsubmit = async e => {
+  e.preventDefault();
+  const r = await fetch(API + "/messages", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({content:$("t").value})});
+  if(r.ok){ $("t").value=""; load(); } else alert("저장 실패: " + r.status);
+};
+init();
+</script>
+</body>
+</html>
