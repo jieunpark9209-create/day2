@@ -112,10 +112,10 @@
 <div class="toast" id="toast" role="status"></div>
 
 <script>
-// 배포 후 Railway 주소로 교체하세요 (예: https://my-api.up.railway.app)
+// 로컬(localhost)에서는 로컬 서버, 배포(Vercel)에서는 Railway 서버를 사용
 const API = ["localhost","127.0.0.1"].includes(location.hostname)
   ? "http://localhost:8000"
-  : "https://YOUR-RAILWAY-URL.up.railway.app";
+  : "https://my-api-production-250f.up.railway.app";
 
 // 로그인 없이 브라우저마다 고유한 장바구니 ID를 발급
 function getCartId(){
